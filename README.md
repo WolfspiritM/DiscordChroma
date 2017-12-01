@@ -19,3 +19,9 @@ p.s. you need to leave the cmd/powershell window open for it to work.
 HOW TO STOP IT (after its running XD )
 
 * just close the cmd/powershell window.
+
+
+LIBRARY
+
+https://www.npmjs.com/package/razerchroma for the chroma lights
+http://www.discord.js.org for discord
