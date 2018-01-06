@@ -5,7 +5,7 @@ var color_var = 16777215;
 
 //chroma init
 const application = {
-    "title": "Razer Chroma Discord (alpha)",
+    "title": "Razer Chroma Discord (beta)",
     "description": "This is a test application for discord integration",
     "author": {
         "name": "DELUUXE",
@@ -50,13 +50,6 @@ const static_white = {
     }
 };
 
-const static_blurple = {
-    "effect": "CHROMA_STATIC",
-    "param": {
-        "color": "255, 255, 255"
-    }
-};
-
 // 16777215 white
 
 
@@ -71,32 +64,64 @@ client.on('ready', () => {
 
 //when you receive a message
 client.on('message', message => {
-    if(message.author !== client.id){
-        console.log('NEW MESSAGE!!!');
-        let chroma;
-        Chroma.initialize(application)
-        .then(config =>{
-            chroma = new Chroma(config)
-        })
-        .then(() => chroma.set({
-            device: 'keyboard',
-            body: static_blurple
-        }))
-        .then(() => setTimeout(function() {
-            chroma.set({
+    if(message.channel.type == "text"){
+        if(message.guild.muted == false){
+            if(message.author.id != client.user.id){
+                console.log('NEW MESSAGE, in ' + message.guild.name + ".");
+                let chroma;
+                Chroma.initialize(application)
+                .then(config =>{
+                    chroma = new Chroma(config)
+                })
+                .then(() => chroma.set({
+                    device: 'keyboard',
+                    body: static_white
+                }))
+                .then(() => setTimeout(function() {
+                    chroma.set({
+                        device: 'keyboard',
+                        body: no_effect
+                    });
+                    setTimeout(function() {
+                        chroma.set({
+                            device: 'keyboard',
+                            body: static_white
+                        });
+                        setTimeout(function() {
+                            chroma.cleanup();
+                        }, 150);
+                    }, 150);
+                }, 150));
+            }
+        }
+    } else if(message.channel.type == "dm" || message.channel.type == "group"){
+        if(message.author.id != client.user.id){
+            console.log('NEW MESSAGE');
+            let chroma;
+            Chroma.initialize(application)
+            .then(config =>{
+                chroma = new Chroma(config)
+            })
+            .then(() => chroma.set({
                 device: 'keyboard',
-                body: no_effect
-            });
-            setTimeout(function() {
+                body: static_white
+            }))
+            .then(() => setTimeout(function() {
                 chroma.set({
                     device: 'keyboard',
-                    body: static_blurple
+                    body: no_effect
                 });
                 setTimeout(function() {
-                    chroma.cleanup();
+                    chroma.set({
+                        device: 'keyboard',
+                        body: static_white
+                    });
+                    setTimeout(function() {
+                        chroma.cleanup();
+                    }, 150);
                 }, 150);
-            }, 100);
-        }, 150));
+            }, 150));
+        }
     }
 });
 
