@@ -1,7 +1,7 @@
 # razer-chroma-discord
 
 this is the first (maybe) discord integration for razer chroma keyboards.
-this is a very very very very very very early test version.
+this is a early test version.
 
 HOW TO INSTALL
 
