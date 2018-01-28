@@ -13,6 +13,7 @@ var debugerror = 0;
 var error1 = 0;
 var warn1 = 0;
 var urError = 0;
+var token1 = null;
 
 var color_var = 16777215;
 
@@ -85,22 +86,40 @@ app.on('ready', function () {
         app.exit();
     });
     setTimeout(function() {
-        //remove splashscreen
-        win.hide();
-        //show discord token/login screen
-        let loginwin = new BrowserWindow({width: 1000, height: 600, frame: false});
-        loginwin.loadURL(path.join('file://', __dirname, '/token.html'));
-        loginwin.on('closed', function () {
+        
+        if (fs.existsSync("autologin.deluuxe")) {
+            fs.renameSync("autologin.deluuxe", "autologin.txt");
             setTimeout(function() {
                 //gets token from login.txt
-                var token = fs.readFileSync('login.txt','utf8');
+                var token = fs.readFileSync('autologin.txt','utf8');
+                //remover quotation markers
+                token1 = token.replace(/['"]+/g, '');
                 //logging in to discord
-                client.login(token.replace(/['"]+/g, ''));
-                //deletes login.txt for more security
-                fs.unlinkSync("login.txt");
+                client.login(token1);
+                //remove splashscreen
+                win.hide();
+                fs.renameSync("autologin.txt", "autologin.deluuxe");
             }, 1000);
-        });
-    }, 8000);
+        } else {
+            //remove splashscreen
+            win.hide();
+            //show discord token/login screen
+            let loginwin = new BrowserWindow({width: 1000, height: 600, frame: false});
+            loginwin.loadURL(path.join('file://', __dirname, '/token.html'));
+            loginwin.on('closed', function () {
+                setTimeout(function() {
+                    //gets token from login.txt
+                    var token = fs.readFileSync('login.txt','utf8');
+                    //deletes login.txt for more security
+                    fs.unlinkSync("login.txt");
+                    //remover quotation markers
+                    token1 = token.replace(/['"]+/g, '');
+                    //logging in to discord
+                    client.login(token1);
+                }, 1000);
+            });
+        }
+    }, 6000);
 });
 
 //after succesfully logged in to discord
@@ -114,6 +133,11 @@ client.on('ready', () => {
         succeswin.hide();
         console.log("Ready to receive messages");
     }, 6000);
+    //saving token for next use
+    fs.writeFile("autologin.txt", token1, function(err) {}); 
+    setTimeout(function() {
+        fs.renameSync("autologin.txt", "autologin.deluuxe");
+    }, 1000);
 });
 
 //when you receive a message
@@ -189,6 +213,10 @@ client.on('error', () => {
     error1 = error1 + 1;
     if (error1 == 1) {
         console.log("There has been an error!");
+        //remover autologin in-case token changed
+        if (fs.existsSync("autologin.deluuxe")) {
+            fs.unlinkSync("autologin.deluuxe");
+        }
         //show succesfully started window
         let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
         errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
@@ -202,6 +230,10 @@ client.on('warn', () => {
     warn1 = warn1 + 1;
     if (warn1 == 1) {
         console.log("There has been an error!");
+        //remover autologin in-case token changed
+        if (fs.existsSync("autologin.deluuxe")) {
+            fs.unlinkSync("autologin.deluuxe");
+        }
         //show succesfully started window
         let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
         errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
@@ -218,6 +250,10 @@ process.on('unhandledRejection', () => {
     urError = urError + 1;
     if (urError == 1) {
         console.log("There has been an error!");
+        //remover autologin in-case token changed
+        if (fs.existsSync("autologin.deluuxe")) {
+        fs.unlinkSync("autologin.deluuxe");
+        }
         //show succesfully started window
         let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
         errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
