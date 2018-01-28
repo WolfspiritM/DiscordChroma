@@ -12,6 +12,7 @@ let tray = null;
 var debugerror = 0;
 var error1 = 0;
 var warn1 = 0;
+var urError = 0;
 
 var color_var = 16777215;
 
@@ -119,33 +120,35 @@ client.on('ready', () => {
 client.on('message', message => {
     if(message.channel.type == "text"){
         if(message.guild.muted == false){
-            if(message.author.id != client.user.id){
-                //do only when it's a message from a non-muted server and not from yourself
-                console.log('NEW MESSAGE, in ' + message.guild.name + ".");
-                let chroma;
-                Chroma.initialize(application)
-                .then(config =>{
-                    chroma = new Chroma(config)
-                })
-                .then(() => chroma.set({
-                    device: 'keyboard',
-                    body: static_white
-                }))
-                .then(() => setTimeout(function() {
-                    chroma.set({
+            if(message.channel.muted == false){
+                if(message.author.id != client.user.id){
+                    //do only when it's a message from a non-muted server and not from yourself
+                    console.log('NEW MESSAGE, in ' + message.guild.name + ".");
+                    let chroma;
+                    Chroma.initialize(application)
+                    .then(config =>{
+                        chroma = new Chroma(config)
+                    })
+                    .then(() => chroma.set({
                         device: 'keyboard',
-                        body: no_effect
-                    });
-                    setTimeout(function() {
+                        body: static_white
+                    }))
+                    .then(() => setTimeout(function() {
                         chroma.set({
                             device: 'keyboard',
-                            body: static_white
+                            body: no_effect
                         });
                         setTimeout(function() {
-                            chroma.cleanup();
+                            chroma.set({
+                                device: 'keyboard',
+                                body: static_white
+                            });
+                            setTimeout(function() {
+                                chroma.cleanup();
+                            }, 150);
                         }, 150);
-                    }, 150);
-                }, 150));
+                    }, 150));
+                }
             }
         }
     } else if(message.channel.type == "dm" || message.channel.type == "group"){
@@ -212,11 +215,14 @@ client.on('warn', () => {
 
 //when a "global" error occurs
 process.on('unhandledRejection', () => {
-    console.log("There has been an error!");
-    //show succesfully started window
-    let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
-    errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
-    errorwin.on('closed', function () {
-        app.exit();
-    });
+    urError = urError + 1;
+    if (urError == 1) {
+        console.log("There has been an error!");
+        //show succesfully started window
+        let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
+        errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
+        errorwin.on('closed', function () {
+            app.exit();
+        });
+    }
 });

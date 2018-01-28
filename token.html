@@ -11,6 +11,9 @@
     100%{background-position:90% 0%}
   }
 
+  html {
+    /*-webkit-app-region: drag;*/
+  }
   body {
     font-family: system, -apple-system, '.SFNSText-Regular', 'SF UI Text', 'Lucida Grande', 'Segoe UI', Ubuntu, Cantarell, sans-serif;
     color: #fff;
@@ -21,6 +24,7 @@
 
     animation: rainbowbackground 20s ease infinite;
     animation-fill-mode: forwards; 
+    -webkit-app-region: drag;
   }
   
   h2 {
@@ -38,12 +42,14 @@
     left: 50%;
     width: 100%;
     transform: translate(-50%, -50%);
+    -webkit-app-region: no-drag;
   }
 
   a {
     text-decoration: none;
     color: #ffffff;
     font-family: system, -apple-system, '.SFNSText-Regular', 'SF UI Text', 'Lucida Grande', 'Segoe UI', Ubuntu, Cantarell, sans-serif;
+    -webkit-app-region: no-drag;
   }
 
   #button {
@@ -61,6 +67,7 @@
     font-family: system, -apple-system, '.SFNSText-Regular', 'SF UI Text', 'Lucida Grande', 'Segoe UI', Ubuntu, Cantarell, sans-serif;
     border-radius: 15px;
     transition: 0.1 ease-in-out;
+    -webkit-app-region: no-drag;
   }
   #button:hover {
     color: #00ff00;
