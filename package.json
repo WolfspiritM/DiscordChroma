@@ -1,0 +1,23 @@
+{
+  "name": "DiscordChroma",
+  "version": "0.1.0",
+  "description": "makes discord interact with your razer chroma keyboard",
+  "main": "main.js",
+  "author": "deluuxe",
+  "license": "ISC",
+  "build": {
+    "appId": "com.deluuxe.discor.chroma",
+    "productName": "DiscordChroma"
+  },
+  "scripts": {
+    "start": "electron .",
+    "pack": "build --dir"
+  },
+  "dependencies": {
+    "discord.js": "^11.2.1",
+    "razerchroma": "^1.0.2"
+  },
+  "devDependencies": {
+    "electron": "^1.7.11"
+  }
+}
