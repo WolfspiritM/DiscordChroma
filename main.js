@@ -7,6 +7,9 @@ const BrowserWindow = electron.BrowserWindow;
 const app = electron.app;
 const path = require('path');
 var fs = require('fs');
+//const notifier = require('node-notifier');
+const WindowsToaster = require('node-notifier').WindowsToaster;
+var log = require('electron-log');
 let loginwin;
 let tray = null;
 var debugerror = 0;
@@ -16,6 +19,15 @@ var urError = 0;
 var token1 = null;
 
 var color_var = 16777215;
+
+log.transports.file.appName = 'DiscordChroma';
+log.transports.file.level = 'info';
+log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
+log.transports.file.maxSize = 5 * 1024 * 1024;
+log.transports.file.file = __dirname + '/log.txt';
+log.transports.file.streamConfig = { flags: 'w' };
+log.transports.file.stream = fs.createWriteStream('log.txt');
+
 
 //chroma init
 const application = {
@@ -72,6 +84,7 @@ const static_white = {
 
 //when the program is succesfully started
 app.on('ready', function () {
+    log.info("starting DiscordChroma");
     //show splash/loading screen
     let win = new BrowserWindow({width: 1000, height: 600, frame: false});
     win.loadURL(path.join('file://', __dirname, '/main.html'));
@@ -83,10 +96,15 @@ app.on('ready', function () {
     tray.setToolTip('DiscordChroma (click to close)');
     //tray.setContextMenu(contextMenu);
     tray.on('click', () => {
-        app.exit();
+        log.info("closing DiscordChroma");
+        let thxwin = new BrowserWindow({width: 1000, height: 600, frame: false});
+        thxwin.loadURL(path.join('file://', __dirname, '/thx.html'));
+        tray.destroy();
+        setTimeout(function() {
+            app.exit();
+        }, 5000);
     });
     setTimeout(function() {
-        
         if (fs.existsSync("autologin.deluuxe")) {
             fs.renameSync("autologin.deluuxe", "autologin.txt");
             setTimeout(function() {
@@ -124,21 +142,40 @@ app.on('ready', function () {
 
 //after succesfully logged in to discord
 client.on('ready', () => {
-    console.log("succesfully logged in to discord");
-    //show succesfully started window
-    let succeswin = new BrowserWindow({width: 1000, height: 600, frame: false});
-    succeswin.loadURL(path.join('file://', __dirname, '/succes.html'));
-    setTimeout(function() {
-        //remove succesfully started window
-        succeswin.hide();
-        console.log("Ready to receive messages");
-    }, 6000);
+    log.info("succesfully logged in to discord");
     //saving token for next use
     fs.writeFile("autologin.txt", token1, function(err) {}); 
     setTimeout(function() {
         fs.renameSync("autologin.txt", "autologin.deluuxe");
     }, 1000);
+    //show notification that DC is running in the background
+    /*notifier.notify({
+        title: 'DiscordChroma',
+        message: 'Is running in the background',
+        icon: path.join(__dirname, 'notify.jpg'),
+        sound: true,
+        wait: true,
+        appID: "com.deluuxe.discord.chroma",
+    });*/
+    var notifier = new WindowsToaster({
+        withFallback: false, // Fallback to Growl or Balloons?
+    });
+    notifier.notify(
+        {
+            title: 'DiscordChroma is running in the background',
+            message: 'To close click on the tray icon in the taskbar',
+            icon: "img/logo.png",
+            sound: true, // Bool | String (as defined by http://msdn.microsoft.com/en-us/library/windows/apps/hh761492.aspx)
+            wait: true, // Bool. Wait for User Action against Notification or times out
+            appID: "com.deluuxe.discord.chroma",
+            appName: "DiscordChroma",
+        },
+        function(error, response) {
+            log.info(response);
+        }
+    );
 });
+
 
 //when you receive a message
 client.on('message', message => {
@@ -147,7 +184,7 @@ client.on('message', message => {
             if(message.channel.muted == false){
                 if(message.author.id != client.user.id){
                     //do only when it's a message from a non-muted server and not from yourself
-                    console.log('NEW MESSAGE, in ' + message.guild.name + ".");
+                    log.info('NEW MESSAGE, in ' + message.guild.name + ".");
                     let chroma;
                     Chroma.initialize(application)
                     .then(config =>{
@@ -177,8 +214,8 @@ client.on('message', message => {
         }
     } else if(message.channel.type == "dm" || message.channel.type == "group"){
         if(message.author.id != client.user.id){
-            //do only when it's a message from DM or GroupDM and if it't not from yourself
-            console.log('NEW MESSAGE');
+            //do only when it's a message from DM or GroupDM and if it's not from yourself
+            log.info('NEW MESSAGE');
             let chroma;
             Chroma.initialize(application)
             .then(config =>{
@@ -207,12 +244,12 @@ client.on('message', message => {
     }
 });
 
-
 // ---------------------------------- discord.js ERROR section --------------------------------- \\
-client.on('error', () => {
+client.on('error', err => {
     error1 = error1 + 1;
     if (error1 == 1) {
-        console.log("There has been an error!");
+        log.info("There has been an error!");
+        log.error(err);
         //remover autologin in-case token changed
         if (fs.existsSync("autologin.deluuxe")) {
             fs.unlinkSync("autologin.deluuxe");
@@ -229,7 +266,7 @@ client.on('error', () => {
 client.on('warn', () => {
     warn1 = warn1 + 1;
     if (warn1 == 1) {
-        console.log("There has been an error!");
+        log.warn("There has been an error!");
         //remover autologin in-case token changed
         if (fs.existsSync("autologin.deluuxe")) {
             fs.unlinkSync("autologin.deluuxe");
@@ -246,10 +283,11 @@ client.on('warn', () => {
 
 
 //when a "global" error occurs
-process.on('unhandledRejection', () => {
+process.on('unhandledRejection', err => {
     urError = urError + 1;
     if (urError == 1) {
-        console.log("There has been an error!");
+        log.info("There has been an error!");
+        log.error(err);
         //remover autologin in-case token changed
         if (fs.existsSync("autologin.deluuxe")) {
         fs.unlinkSync("autologin.deluuxe");
