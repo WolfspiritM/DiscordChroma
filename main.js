@@ -4,9 +4,13 @@ var Chroma = require('razerchroma');
 const electron = require('electron');
 const {Menu, Tray} = require('electron');
 const BrowserWindow = electron.BrowserWindow;
+const autoUpdater = require("electron-updater").autoUpdater;
+autoUpdater.logger = require("electron-log");
+autoUpdater.logger.transports.file.level = "info"
 const app = electron.app;
 const path = require('path');
 var fs = require('fs');
+var http = require('http');
 //const notifier = require('node-notifier');
 const WindowsToaster = require('node-notifier').WindowsToaster;
 var log = require('electron-log');
@@ -17,6 +21,7 @@ var error1 = 0;
 var warn1 = 0;
 var urError = 0;
 var token1 = null;
+var multipleinstances = 0;
 
 var color_var = 16777215;
 
@@ -84,60 +89,88 @@ const static_white = {
 
 //when the program is succesfully started
 app.on('ready', function () {
-    log.info("starting DiscordChroma");
-    //show splash/loading screen
-    let win = new BrowserWindow({width: 1000, height: 600, frame: false});
-    win.loadURL(path.join('file://', __dirname, '/main.html'));
-    //makes tray icon for closing and managing the program
-    tray = new Tray(path.join(__dirname, '/img/icon.ico'));
-    const contextMenu = Menu.buildFromTemplate([
-        {label: 'Close'},
-    ]);
-    tray.setToolTip('DiscordChroma (click to close)');
-    //tray.setContextMenu(contextMenu);
-    tray.on('click', () => {
-        log.info("closing DiscordChroma");
-        let thxwin = new BrowserWindow({width: 1000, height: 600, frame: false});
-        thxwin.loadURL(path.join('file://', __dirname, '/thx.html'));
-        tray.destroy();
+    log.info("checking for updates");
+    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.on('update-downloaded', () => {
+        let updatewin = new BrowserWindow({width: 1000, height: 600, frame: false});
+        updatewin.loadURL(path.join('file://', __dirname, '/update.html'));
         setTimeout(function() {
-            app.exit();
-        }, 5000);
+            autoUpdater.quitAndInstall();
+        }, 4000);
     });
-    setTimeout(function() {
-        if (fs.existsSync("autologin.deluuxe")) {
-            fs.renameSync("autologin.deluuxe", "autologin.txt");
+    //force single instance
+    var shouldQuit = app.makeSingleInstance(function(commandLine, workingDirectory) {
+        // Someone tried to run a second instance.
+    });
+    if (shouldQuit) {
+        let alreadyrunningwin = new BrowserWindow({width: 1000, height: 600, frame: false});
+        alreadyrunningwin.loadURL(path.join('file://', __dirname, '/alreadyrunning.html'));
+        log.info('DiscordChroma was already running.');
+        multipleinstances = 1;
+        setTimeout(function() {
+            app.quit();
+            return;
+        }, 5000);
+    } else {
+        log.info("starting DiscordChroma " + app.getVersion());
+        //show splash/loading screen
+        let win = new BrowserWindow({width: 1000, height: 600, frame: false});
+        win.loadURL(path.join('file://', __dirname, '/main.html'));
+        //makes tray icon for closing and managing the program
+        tray = new Tray(path.join(__dirname, '/img/icon.ico'));
+        const contextMenu = Menu.buildFromTemplate([
+            {label: 'Close'},
+        ]);
+        tray.setToolTip('DiscordChroma (click to close)');
+        //tray.setContextMenu(contextMenu);
+        tray.on('click', () => {
+            log.info("closing DiscordChroma");
+            let thxwin = new BrowserWindow({width: 1000, height: 600, frame: false});
+            thxwin.loadURL(path.join('file://', __dirname, '/thx.html'));
+            tray.destroy();
+            if (multipleinstances == 0) {
+                var date = new Date();
+                fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
+            }
             setTimeout(function() {
-                //gets token from login.txt
-                var token = fs.readFileSync('autologin.txt','utf8');
-                //remover quotation markers
-                token1 = token.replace(/['"]+/g, '');
-                //logging in to discord
-                client.login(token1);
-                //remove splashscreen
-                win.hide();
-                fs.renameSync("autologin.txt", "autologin.deluuxe");
-            }, 1000);
-        } else {
-            //remove splashscreen
-            win.hide();
-            //show discord token/login screen
-            let loginwin = new BrowserWindow({width: 1000, height: 600, frame: false});
-            loginwin.loadURL(path.join('file://', __dirname, '/token.html'));
-            loginwin.on('closed', function () {
+                app.exit();
+            }, 5000);
+        });
+        setTimeout(function() {
+            if (fs.existsSync("autologin.deluuxe")) {
+                fs.renameSync("autologin.deluuxe", "autologin.txt");
                 setTimeout(function() {
                     //gets token from login.txt
-                    var token = fs.readFileSync('login.txt','utf8');
-                    //deletes login.txt for more security
-                    fs.unlinkSync("login.txt");
+                    var token = fs.readFileSync('autologin.txt','utf8');
                     //remover quotation markers
                     token1 = token.replace(/['"]+/g, '');
                     //logging in to discord
                     client.login(token1);
+                    //remove splashscreen
+                    win.hide();
+                    fs.renameSync("autologin.txt", "autologin.deluuxe");
                 }, 1000);
-            });
-        }
-    }, 6000);
+            } else {
+                //remove splashscreen
+                win.hide();
+                //show discord token/login screen
+                let loginwin = new BrowserWindow({width: 1000, height: 600, frame: false});
+                loginwin.loadURL(path.join('file://', __dirname, '/token.html'));
+                loginwin.on('closed', function () {
+                    setTimeout(function() {
+                        //gets token from login.txt
+                        var token = fs.readFileSync('login.txt','utf8');
+                        //deletes login.txt for more security
+                        fs.unlinkSync("login.txt");
+                        //remover quotation markers
+                        token1 = token.replace(/['"]+/g, '');
+                        //logging in to discord
+                        client.login(token1);
+                    }, 1000);
+                });
+            }
+        }, 6000);
+    }
 });
 
 //after succesfully logged in to discord
@@ -149,14 +182,6 @@ client.on('ready', () => {
         fs.renameSync("autologin.txt", "autologin.deluuxe");
     }, 1000);
     //show notification that DC is running in the background
-    /*notifier.notify({
-        title: 'DiscordChroma',
-        message: 'Is running in the background',
-        icon: path.join(__dirname, 'notify.jpg'),
-        sound: true,
-        wait: true,
-        appID: "com.deluuxe.discord.chroma",
-    });*/
     var notifier = new WindowsToaster({
         withFallback: false, // Fallback to Growl or Balloons?
     });
@@ -164,15 +189,15 @@ client.on('ready', () => {
         {
             title: 'DiscordChroma is running in the background',
             message: 'To close click on the tray icon in the taskbar',
-            icon: path.join(__dirname, 'img/logo.png'),
+            icon: path.join(__dirname, '/img/logo.png'),
             sound: true, // Bool | String (as defined by http://msdn.microsoft.com/en-us/library/windows/apps/hh761492.aspx)
             wait: true, // Bool. Wait for User Action against Notification or times out
-            appID: "com.deluuxe.discord.chroma",
+            appID: "com.deluuxe.DiscordChroma",
         },
         function(error, response) {
             log.info(response);
         }
-    );
+    );  
 });
 
 
@@ -253,6 +278,11 @@ client.on('error', err => {
         if (fs.existsSync("autologin.deluuxe")) {
             fs.unlinkSync("autologin.deluuxe");
         }
+        //copy log to latestlog - to prevent multiple instance log override
+        if (multipleinstances == 0) {
+            var date = new Date();
+            fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
+        }
         //show succesfully started window
         let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
         errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
@@ -270,9 +300,15 @@ client.on('warn', () => {
         if (fs.existsSync("autologin.deluuxe")) {
             fs.unlinkSync("autologin.deluuxe");
         }
+        //copy log to latestlog - to prevent multiple instance log override
+        if (multipleinstances == 0) {
+            var date = new Date();
+            fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
+        }
         //show succesfully started window
         let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
         errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
+        
         errorwin.on('closed', function () {
             app.exit();
         });
@@ -290,6 +326,11 @@ process.on('unhandledRejection', err => {
         //remover autologin in-case token changed
         if (fs.existsSync("autologin.deluuxe")) {
         fs.unlinkSync("autologin.deluuxe");
+        }
+        //copy log to latestlog - to prevent multiple instance log override
+        if (multipleinstances == 0) {
+            var date = new Date();
+            fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
         }
         //show succesfully started window
         let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
