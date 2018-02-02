@@ -164,11 +164,10 @@ client.on('ready', () => {
         {
             title: 'DiscordChroma is running in the background',
             message: 'To close click on the tray icon in the taskbar',
-            icon: "img/logo.png",
+            icon: path.join(__dirname, 'img/logo.png'),
             sound: true, // Bool | String (as defined by http://msdn.microsoft.com/en-us/library/windows/apps/hh761492.aspx)
             wait: true, // Bool. Wait for User Action against Notification or times out
             appID: "com.deluuxe.discord.chroma",
-            appName: "DiscordChroma",
         },
         function(error, response) {
             log.info(response);
