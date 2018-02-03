@@ -4,13 +4,12 @@ var Chroma = require('razerchroma');
 const electron = require('electron');
 const {Menu, Tray} = require('electron');
 const BrowserWindow = electron.BrowserWindow;
+const app = electron.app;
 const autoUpdater = require("electron-updater").autoUpdater;
 autoUpdater.logger = require("electron-log");
 autoUpdater.logger.transports.file.level = "info"
-const app = electron.app;
 const path = require('path');
 var fs = require('fs');
-var http = require('http');
 //const notifier = require('node-notifier');
 const WindowsToaster = require('node-notifier').WindowsToaster;
 var log = require('electron-log');
@@ -20,8 +19,8 @@ var debugerror = 0;
 var error1 = 0;
 var warn1 = 0;
 var urError = 0;
+var ECONNRESET = 0;
 var token1 = null;
-var multipleinstances = 0;
 
 var color_var = 16777215;
 
@@ -87,17 +86,10 @@ const static_white = {
 
 // ------------------------------------ start program ----------------------------------- \\
 
+
+
 //when the program is succesfully started
 app.on('ready', function () {
-    log.info("checking for updates");
-    autoUpdater.checkForUpdatesAndNotify();
-    autoUpdater.on('update-downloaded', () => {
-        let updatewin = new BrowserWindow({width: 1000, height: 600, frame: false});
-        updatewin.loadURL(path.join('file://', __dirname, '/update.html'));
-        setTimeout(function() {
-            autoUpdater.quitAndInstall();
-        }, 4000);
-    });
     //force single instance
     var shouldQuit = app.makeSingleInstance(function(commandLine, workingDirectory) {
         // Someone tried to run a second instance.
@@ -106,13 +98,12 @@ app.on('ready', function () {
         let alreadyrunningwin = new BrowserWindow({width: 1000, height: 600, frame: false});
         alreadyrunningwin.loadURL(path.join('file://', __dirname, '/alreadyrunning.html'));
         log.info('DiscordChroma was already running.');
-        multipleinstances = 1;
         setTimeout(function() {
             app.quit();
             return;
         }, 5000);
     } else {
-        log.info("starting DiscordChroma " + app.getVersion());
+        log.info("starting DiscordChroma");
         //show splash/loading screen
         let win = new BrowserWindow({width: 1000, height: 600, frame: false});
         win.loadURL(path.join('file://', __dirname, '/main.html'));
@@ -128,10 +119,8 @@ app.on('ready', function () {
             let thxwin = new BrowserWindow({width: 1000, height: 600, frame: false});
             thxwin.loadURL(path.join('file://', __dirname, '/thx.html'));
             tray.destroy();
-            if (multipleinstances == 0) {
-                var date = new Date();
-                fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
-            }
+            var date = new Date();
+            fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
             setTimeout(function() {
                 app.exit();
             }, 5000);
@@ -175,29 +164,40 @@ app.on('ready', function () {
 
 //after succesfully logged in to discord
 client.on('ready', () => {
-    log.info("succesfully logged in to discord");
-    //saving token for next use
-    fs.writeFile("autologin.txt", token1, function(err) {}); 
-    setTimeout(function() {
-        fs.renameSync("autologin.txt", "autologin.deluuxe");
-    }, 1000);
-    //show notification that DC is running in the background
-    var notifier = new WindowsToaster({
-        withFallback: false, // Fallback to Growl or Balloons?
-    });
-    notifier.notify(
-        {
-            title: 'DiscordChroma is running in the background',
-            message: 'To close click on the tray icon in the taskbar',
-            icon: path.join(__dirname, '/img/logo.png'),
-            sound: true, // Bool | String (as defined by http://msdn.microsoft.com/en-us/library/windows/apps/hh761492.aspx)
-            wait: true, // Bool. Wait for User Action against Notification or times out
-            appID: "com.deluuxe.DiscordChroma",
-        },
-        function(error, response) {
-            log.info(response);
-        }
-    );  
+    if (ECONNRESET == 0) {
+        log.info("succesfully logged in to discord");
+        //saving token for next use
+        fs.writeFile("autologin.txt", token1, function(err) {}); 
+        setTimeout(function() {
+            fs.renameSync("autologin.txt", "autologin.deluuxe");
+        }, 1000);
+        //show notification that DC is running in the background
+        /*notifier.notify({
+            title: 'DiscordChroma',
+            message: 'Is running in the background',
+            icon: path.join(__dirname, 'notify.jpg'),
+            sound: true,
+            wait: true,
+            appID: "com.deluuxe.discord.chroma",
+        });*/
+        console.log(__dirname + "\\img\\logo.png");
+        var notifier = new WindowsToaster({
+            withFallback: false, // Fallback to Growl or Balloons?
+        });
+        notifier.notify(
+            {
+                title: 'DiscordChroma is running in the background',
+                message: 'To close click on the tray icon in the taskbar',
+                icon: __dirname + "\\img\\logo.png",
+                sound: true, // Bool | String (as defined by http://msdn.microsoft.com/en-us/library/windows/apps/hh761492.aspx)
+                wait: true, // Bool. Wait for User Action against Notification or times out
+                appID: "com.deluuxe.DiscordChroma",
+            },
+            function(error, response) {
+                log.info(response);
+            }
+        );  
+    }
 });
 
 
@@ -270,41 +270,70 @@ client.on('message', message => {
 
 // ---------------------------------- discord.js ERROR section --------------------------------- \\
 client.on('error', err => {
-    error1 = error1 + 1;
-    if (error1 == 1) {
-        log.info("There has been an error!");
+    if (err.message == "read ECONNRESET") {
+        ECONNRESET = 1;
         log.error(err);
-        //remover autologin in-case token changed
         if (fs.existsSync("autologin.deluuxe")) {
-            fs.unlinkSync("autologin.deluuxe");
-        }
-        //copy log to latestlog - to prevent multiple instance log override
-        if (multipleinstances == 0) {
+            fs.renameSync("autologin.deluuxe", "autologin.txt");
+            setTimeout(function() {
+                //gets token from autologin.txt
+                var token = fs.readFileSync('autologin.txt','utf8');
+                //remover quotation markers
+                token1 = token.replace(/['"]+/g, '');
+                //re-logging in to discord
+                client.destroy().then(() => client.login(token1));
+                fs.renameSync("autologin.txt", "autologin.deluuxe");
+            }, 1000);
+        } else {
+            log.info("There has been an error and we cant login automaticaly!");
+            log.error(err);
+            //remover autologin in-case token changed
+            if (fs.existsSync("autologin.deluuxe")) {
+                fs.unlinkSync("autologin.deluuxe");
+            }
+            //copy log to latestlog - to prevent multiple instance log override
             var date = new Date();
             fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
+            //show succesfully started window
+            let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
+            errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
+            errorwin.on('closed', function () {
+                app.exit();
+            });
         }
-        //show succesfully started window
-        let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
-        errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
-        errorwin.on('closed', function () {
-            app.exit();
-        });
+    } else {
+        error1 = error1 + 1;
+        if (error1 == 1) {
+            log.info("There has been an error!");
+            log.error(err);
+            //remover autologin in-case token changed
+            if (fs.existsSync("autologin.deluuxe")) {
+                fs.unlinkSync("autologin.deluuxe");
+            }
+            //copy log to latestlog - to prevent multiple instance log override
+            var date = new Date();
+            fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
+            //show succesfully started window
+            let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
+            errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
+            errorwin.on('closed', function () {
+                app.exit();
+            });
+        }
     }
 });
 
 client.on('warn', () => {
     warn1 = warn1 + 1;
     if (warn1 == 1) {
-        log.warn("There has been an error!");
+        log.warn("There has been a warning/error!");
         //remover autologin in-case token changed
         if (fs.existsSync("autologin.deluuxe")) {
             fs.unlinkSync("autologin.deluuxe");
         }
         //copy log to latestlog - to prevent multiple instance log override
-        if (multipleinstances == 0) {
-            var date = new Date();
-            fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
-        }
+        var date = new Date();
+        fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
         //show succesfully started window
         let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
         errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
@@ -328,10 +357,8 @@ process.on('unhandledRejection', err => {
         fs.unlinkSync("autologin.deluuxe");
         }
         //copy log to latestlog - to prevent multiple instance log override
-        if (multipleinstances == 0) {
-            var date = new Date();
-            fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
-        }
+        var date = new Date();
+        fs.createReadStream('log.txt').pipe(fs.createWriteStream("latestlog.txt"));
         //show succesfully started window
         let errorwin = new BrowserWindow({width: 1000, height: 600, frame: false});
         errorwin.loadURL(path.join('file://', __dirname, '/error.html'));
