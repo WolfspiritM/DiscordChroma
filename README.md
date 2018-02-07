@@ -19,4 +19,6 @@ Download installer from the releases page (download version 0.2.0 or above to ha
 Once installed it's in your programs list, you can uninstall it from there or go to appdata/local/programs/DiscordChroma and run the uninstaller
 
 
-### created by DELUUXE
+### Created by DELUUXE
+#### Special thanks to:
+- WolfspiritM (github and razer insider)
