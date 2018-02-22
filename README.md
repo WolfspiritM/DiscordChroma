@@ -1,4 +1,4 @@
-# DiscordChroma
+# DiscordChroma https://i.imgur.com/fRpCwBf.png
 
 This is the first (maybe) discord integration for razer chroma keyboards.
 Still in development. 
