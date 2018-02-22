@@ -1,4 +1,4 @@
-# DiscordChroma ![DiscordChroma logo](https://i.imgur.com/fRpCwBf.png "DiscordChroma")
+# DiscordChroma [logo]:(https://i.imgur.com/fRpCwBf.png "DiscordChroma")
 
 This is the first (maybe) discord integration for razer chroma keyboards.
 Still in development. 
