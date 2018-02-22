@@ -12,7 +12,7 @@ Still in development.
 
 ## How to intall
 
-Download installer from the releases page (download version 0.2.0 or above to have it autoupdate)
+Download installer from the releases page (download version 0.2.2 or above to have it autoupdate)
 
 ## How to uninstall
 
